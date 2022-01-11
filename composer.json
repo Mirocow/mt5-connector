@@ -1,5 +1,5 @@
 {
-    "name": "crystal/mt5-connector",
+    "name": "mirocow/mt5-connector",
     "description": "MT5 Manager API",
     "type": "library",
     "require": {
