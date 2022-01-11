@@ -10,6 +10,9 @@ use GuzzleHttp\RequestOptions;
  */
 class Mt5Client
 {
+    public const METHOD_GET = 'get';
+    public const METHOD_POST = 'post';
+
     private $ip;
     private $port;
     private $login;
@@ -45,6 +48,10 @@ class Mt5Client
         return true;
     }
 
+    /**
+     * @return false|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
     public function Auth()
     {
         if ($this->httpClient == null) {
@@ -58,14 +65,7 @@ class Mt5Client
             'type' => 'manager'
         ];
 
-        $result = $this->httpClient->get('/auth_start', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Error code: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/auth_start', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'Auth start error ' . $result['retcode']];
         }
@@ -87,14 +87,7 @@ class Mt5Client
             'cli_rand' => $cli_rand
         ];
 
-        $result = $this->httpClient->get('/auth_answer', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Error code: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/auth_answer', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'Auth start error ' . $result['retcode']];
         }
@@ -112,6 +105,27 @@ class Mt5Client
     }
 
     /**
+     * @param string $method
+     * @param string $commandName
+     * @param array $params
+     * @return string[]
+     */
+    public function executeCommand(string $method, string $commandName, array $params = []): array
+    {
+        if (empty($this->httpClient)){
+            return false;
+        }
+
+        $result = $this->httpClient->$method($commandName, $params);
+
+        if ($result->getStatusCode() != 200){
+            return ['Status' => 'Server error: '.$result->getStatusCode()];
+        }
+
+        return json_decode($result->getBody(),true);
+    }
+
+    /**
      * Update MT5 User
      * @param array $params
      */
@@ -125,14 +139,7 @@ class Mt5Client
             return ['Status' => 'Login is emptry'];
         }
 
-        $result = $this->httpClient->get('/user_update', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_update', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User update error ' . $result['retcode']];
         }
@@ -154,21 +161,10 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_add', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_add', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User create error ' . $result['retcode']];
         }
-
-        /*if ($result['login'] == null){
-            return ['Status' => 'Server error: login field is empty'];
-        }*/
 
         return $result['answer'];
     }
@@ -187,14 +183,7 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_delete', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_delete', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User delete error ' . $result['retcode']];
         }
@@ -218,16 +207,32 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_get_batch', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_get_batch', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User get batch error ' . $result['retcode']];
+        }
+
+        return $result['answer'];
+    }
+
+    /**
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function UserGet(array $params)
+    {
+        if ($this->httpClient == null){
+            return false;
+        }
+
+        if (empty($params['login'])){
+            return ['Status' => 'Missing requred fields'];
+        }
+
+        $result = $this->executeCommand(self::METHOD_GET, '/user_get', ['query' => $params]);
+        if ($result['retcode'] != '0 Done'){
+            return ['Status' => 'Error '.$params['retcode']];
         }
 
         return $result['answer'];
@@ -253,13 +258,7 @@ class Mt5Client
             return ['Status' => 'type field is incorrect'];
         }
 
-        $result = $this->httpClient->get('/user_pass_check', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
+        $result = $this->executeCommand(self::METHOD_GET, '/user_pass_check', ['query' => $params]);
 
         return $result['retcode'];
     }
@@ -284,13 +283,7 @@ class Mt5Client
             return ['Status' => 'type field is incorrect'];
         }
 
-        $result = $this->httpClient->get('/user_pass_change', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
+        $result = $this->executeCommand(self::METHOD_GET, '/user_pass_change', ['query' => $params]);
 
         return $result['retcode'];
     }
@@ -311,14 +304,7 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_account_get', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_account_get', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User acoount get error ' . $result['retcode']];
         }
@@ -342,14 +328,7 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_account_get_batch', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_account_get_batch', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User acoount get batch error ' . $result['retcode']];
         }
@@ -373,14 +352,7 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_logins', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_logins', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User logins get error ' . $result['retcode']];
         }
@@ -399,14 +371,7 @@ class Mt5Client
             return false;
         }
 
-        $result = $this->httpClient->get('/user_total');
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_total');
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User acoount get error ' . $result['retcode']];
         }
@@ -430,16 +395,36 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_group', ['query' => $params]);
-
-        if ($result->getStatusCode() != 200) {
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_group', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User group get error ' . $result['retcode']];
+        }
+
+        return $result['answer'];
+    }
+
+    /**
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function UserBalance(array $params)
+    {
+        if ($this->httpClient == null) {
+            return false;
+        }
+
+        if (empty($params['login']) || empty($params['balance']) || empty($params['type'])) {
+            return ['Status' => 'Missing requred fields'];
+        }
+
+        if ($params['type'] < 0 && $params['type'] > 19) {
+            return ['Status' => 'type field is incorrect'];
+        }
+
+        $result = $this->executeCommand(self::METHOD_GET, '/trade_balance', ['query' => $params]);
+        if ($result['retcode'] != '0 Done'){
+            return ['Status' => 'Error '.$result['retcode']];
         }
 
         return $result['answer'];
@@ -461,14 +446,7 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_balance_check',['query' => $params]);
-
-        if ($result->getStatusCode() != 200){
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_balance_check', ['query' => $params]);
         if ($result['retcode'] != '0 Done') {
             return ['Status' => 'User balance check error ' . $result['retcode']];
         }
@@ -491,17 +469,10 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_archive',['query' => $params]);
-
-        if ($result->getStatusCode() != 200){
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
+        $result = $this->executeCommand(self::METHOD_GET, '/user_archive', ['query' => $params]);
 
         return $result;
     }
-
 
     /**
      * User Archive get
@@ -519,14 +490,7 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_archive_get',['query' => $params]);
-
-        if ($result->getStatusCode() != 200){
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_archive_get', ['query' => $params]);
         if ($result['retcode'] != '0 Done'){
             return ['Status' => 'User archive get error'.$result['retcode']];
         }
@@ -550,14 +514,7 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->get('/user_backup_get',['query' => $params]);
-
-        if ($result->getStatusCode() != 200){
-            return ['Status' => 'Server error: ' . $result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(), true);
-
+        $result = $this->executeCommand(self::METHOD_GET, '/user_backup_get',['query' => $params]);
         if ($result['retcode'] != '0 Done'){
             return ['Status' => 'User backup get error'.$result['retcode']];
         }
@@ -566,7 +523,6 @@ class Mt5Client
 
         return $result['answer'];
     }
-
 
     /**
      * MT5 User Restore
@@ -584,18 +540,209 @@ class Mt5Client
             return ['Status' => 'Missing requred fields'];
         }
 
-        $result = $this->httpClient->post('/user_restore',[RequestOptions::JSON => $params]);
-
-        if ($result->getStatusCode() != 200){
-            return ['Status' => 'Server error: '.$result->getStatusCode()];
-        }
-
-        $result = json_decode($result->getBody(),true);
-
+        $result = $this->executeCommand(self::METHOD_POST, '/user_restore',[RequestOptions::JSON => $params]);
         if ($result['retcode'] != '0 Done'){
             return ['Status' => 'User restore error'.$result['retcode']];
         }
 
         return $result['answer'];
+    }
+
+    /**
+     * MT5 Client add
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function ClientAdd(array $params)
+    {
+        if ($this->httpClient == null) {
+            return false;
+        }
+
+        if (empty($params)){
+            return ['Status' => 'Missing requred fields'];
+        }
+
+        $result = $this->executeCommand(self::METHOD_POST, '/client_add',[RequestOptions::JSON => $params]);
+
+        return $result;
+    }
+
+    /**
+     * MT5 Client Get
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function ClientGet(array $params)
+    {
+        if ($this->httpClient == null) {
+            return false;
+        }
+
+        if (empty($params['id'])){
+            return ['Status' => 'Missing requred fields'];
+        }
+
+        $result = $this->executeCommand(self::METHOD_GET, '/client_get', ['query' => $params]);
+        if ($result['retcode'] != '0 Done'){
+            return ['Status' => 'Client get error: '.$result['retcode']];
+        }
+
+        return $result['answer'];
+    }
+
+    /**
+     * MT5 Client update
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function ClientUpdate(array $params)
+    {
+        if ($this->httpClient == null){
+            return false;
+        }
+
+        if (empty($params)){
+            return ['Status' => 'Missing requred fields'];
+        }
+
+        $result = $this->executeCommand(self::METHOD_POST, '/client_update',[RequestOptions::JSON => $params]);
+
+        return $result;
+    }
+
+    /** Get Dayly report
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function DailyReportGet(array $params)
+    {
+        if ($this->httpClient == null){
+            return false;
+        }
+
+        if (empty($params['from']) && empty($params['to']) && empty($params['login'])){
+            return ['Status' => 'Missing requred fields'];
+        }
+
+        $result = $this->executeCommand(self::METHOD_GET, '/daily_get', ['query' => $params]);
+        if ($result['retcode'] != '0 Done'){
+            return ['Status' => 'Error via generating daily report:'.$result['retcode']];
+        }
+
+        return $result['answer'];
+    }
+
+    /**
+     * MT5 Order get batch
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function OrderGetBatch(array $params)
+    {
+        if (empty($this->httpClient)){
+            return false;
+        }
+
+        if (empty($params)){
+            return false;
+        }
+
+        $result = $this->executeCommand(self::METHOD_GET, '/order_get_batch', ['query' => $params]);
+        if ($result['retcode'] != '0 Done'){
+            return ['Status' => 'Error: '.$result['retcode']];
+        }
+
+        return $result['answer'];
+    }
+
+    /**
+     * MT5 History Get Batch
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function HistoryGetBatch(array $params)
+    {
+        if (empty($this->httpClient)){
+            return false;
+        }
+
+        if (empty($params)){
+            return false;
+        }
+
+        $result = $this->executeCommand(self::METHOD_GET, '/history_get_batch', ['query' => $params]);
+        if ($result['retcode'] != '0 Done'){
+            return ['Status' => 'Error: '.$result['retcode']];
+        }
+
+        return $result['answer'];
+    }
+
+    /**
+     * Get symbol for group
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function SymbolGetGroup(array $params)
+    {
+        if (empty($this->httpClient)){
+            return false;
+        }
+
+        if (empty($params)){
+            return false;
+        }
+
+        $result = $this->executeCommand(self::METHOD_GET, '/symbol_get_group', ['query' => $params]);
+        if ($result['retcode'] != '0 Done'){
+            return ['Status' => 'Error: '.$result['retcode']];
+        }
+
+        return $result['answer'];
+    }
+
+    /**
+     * Batch add symbol
+     * @param array $params
+     * @return false|mixed|string[]
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function SymbolAddBatch(array $params)
+    {
+        if (empty($this->httpClient)){
+            return false;
+        }
+
+        if (empty($params)){
+            return false;
+        }
+
+        $result = $this->executeCommand(self::METHOD_POST, '/symbol_add_batch', ['query' => $params]);
+        if ($result['retcode'] != '0 Done'){
+            return ['Status' => 'Error: '.$result['retcode']];
+        }
+
+        return $result['answer'];
+    }
+
+    /**
+     * @param string $commandName
+     * @param array $params
+     * @return array
+     * @throws \GuzzleHttp\Exception\GuzzleException
+     */
+    public function SendCustomCommand(string $commandName, array $params): array
+    {
+        $result = $this->executeCommand($commandName, $params);
+
+        return $result['answer'] ?? [];
     }
 }
