@@ -12,12 +12,16 @@
         {
             "name": "crystaldaking",
             "email": "crystal@crystalapps.by"
-        }
+        },
+        {
+            "name": "mirocow",
+            "email": "mr.mircow@gmail.com"
+        }        
     ],
     "minimum-stability": "dev",
     "autoload": {
         "psr-4": {
-            "CrystalApps\\Mt5Connector\\" : "src/"
+            "mirocow\\Mt5Connector\\" : "src/"
         }
     }
 }
