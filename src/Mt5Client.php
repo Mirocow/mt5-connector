@@ -1,11 +1,11 @@
 <?php
-namespace CrystalApps\Mt5Connector;
+namespace mirocow\Mt5Connector;
 
 use GuzzleHttp\RequestOptions;
 
 /**
  * Class Client
- * @package CrystalApps\Mt5Connector
+ * @package mirocow\Mt5Connector
  * @property \GuzzleHttp\Client $httpClient
  */
 class Mt5Client
