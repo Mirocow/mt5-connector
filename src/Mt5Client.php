@@ -157,7 +157,7 @@ class Mt5Client
             return false;
         }
 
-        if (empty($params['pass_main']) || empty($params['pass_investor']) || empty($params['name']) || empty($params['group'])) {
+        if ( !(!empty($params['pass_main']) || !empty($params['pass_investor']) || !empty($params['name']) || !empty($params['group'])) ) {
             return ['Status' => 'Missing requred fields'];
         }
 
@@ -250,7 +250,7 @@ class Mt5Client
             return false;
         }
 
-        if (empty($params['login']) || empty($params['password']) || empty($params['type'])) {
+        if ( !(empty($params['login']) || !empty($params['password']) || !empty($params['type'])) ) {
             return ['Status' => 'Missing requred fields'];
         }
 
@@ -275,7 +275,7 @@ class Mt5Client
             return false;
         }
 
-        if (empty($params['login']) || empty($params['password']) || empty($params['type'])) {
+        if ( !(!empty($params['login']) || !empty($params['password']) || !empty($params['type'])) ) {
             return ['Status' => 'Missing requred fields'];
         }
 
@@ -324,7 +324,7 @@ class Mt5Client
             return false;
         }
 
-        if (empty($params['login']) || empty($params['group'])) {
+        if ( !(!empty($params['login']) || !empty($params['group'])) ) {
             return ['Status' => 'Missing requred fields'];
         }
 
@@ -414,7 +414,7 @@ class Mt5Client
             return false;
         }
 
-        if (empty($params['login']) || empty($params['balance']) || empty($params['type'])) {
+        if ( !(!empty($params['login']) || !empty($params['balance']) || !empty($params['type'])) ) {
             return ['Status' => 'Missing requred fields'];
         }
 
